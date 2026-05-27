@@ -1,0 +1,47 @@
+name: Hotfix Preview
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
+
+env:
+  BUILD_ID: gdw-hf-pr${{ github.event.number }}-${{ github.run_number }}
+
+jobs:
+  deploy-hotfix-preview:
+    name: Deploy Hotfix Preview
+    if: ${{ contains(github.head_ref, 'hotfix') }}
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          echo "🔥 Hotfix preview build: $BUILD_ID"
+          echo "PR: #${{ github.event.number }} (${{ github.head_ref }})"
+          echo "Commit: ${{ github.sha }}"
+          echo "URL: pr-${{ github.event.number }}.dev.example.com"
+
+  promote-to-stage:
+    name: Promote to Stage
+    needs: deploy-hotfix-preview
+    if: ${{ contains(github.head_ref, 'hotfix') }}
+    runs-on: ubuntu-latest
+    environment: stage
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          echo "✅ Promoting hotfix $BUILD_ID to stage"
+          echo "URL: stage.example.com"
+
+  promote-to-production:
+    name: Promote to Production
+    needs: promote-to-stage
+    if: ${{ contains(github.head_ref, 'hotfix') }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          echo "✅ Promoting hotfix $BUILD_ID to production"
+          echo "URL: app.example.com"

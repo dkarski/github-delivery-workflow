@@ -1,0 +1,61 @@
+name: Hotfix Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: "Production commit SHA (hotfix base)"
+        required: true
+      skip_stage:
+        description: "Skip stage — promote directly to production"
+        type: boolean
+        default: false
+
+jobs:
+  deploy-hotfix-to-development:
+    name: Deploy Hotfix to Development
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_sha }}
+      - run: |
+          BUILD_ID="gdw-hf-${{ github.run_number }}-1"
+          echo "🔥 Hotfix build: $BUILD_ID"
+          echo "Base commit: ${{ inputs.source_sha }}"
+          echo "Skip stage: ${{ inputs.skip_stage }}"
+          echo "URL: pr-hf-${{ github.run_number }}.dev.example.com"
+
+  promote-hotfix-to-stage:
+    name: Promote Hotfix to Stage
+    needs: deploy-hotfix-to-development
+    if: ${{ !inputs.skip_stage }}
+    runs-on: ubuntu-latest
+    environment: stage
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_sha }}
+      - run: |
+          BUILD_ID="gdw-hf-${{ github.run_number }}-1"
+          echo "✅ Hotfix $BUILD_ID promoted to stage"
+          echo "URL: stage.example.com"
+
+  promote-hotfix-to-production:
+    name: Promote Hotfix to Production
+    needs: [deploy-hotfix-to-development, promote-hotfix-to-stage]
+    if: |
+      always() &&
+      needs.deploy-hotfix-to-development.result == 'success' &&
+      (needs.promote-hotfix-to-stage.result == 'success' || needs.promote-hotfix-to-stage.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_sha }}
+      - run: |
+          BUILD_ID="gdw-hf-${{ github.run_number }}-1"
+          echo "✅ Hotfix $BUILD_ID promoted to production"
+          echo "URL: app.example.com"

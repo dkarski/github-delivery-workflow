@@ -1,0 +1,42 @@
+name: Deployment
+
+on:
+  push:
+    branches: [main]
+
+env:
+  BUILD_ID: gdw-${{ github.run_number }}-1
+
+jobs:
+  deploy-to-development:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          echo "🚀 Build: $BUILD_ID"
+          echo "Commit: ${{ github.sha }}"
+          echo "URL: dev.example.com"
+
+  promote-to-stage:
+    name: Promote to Stage
+    needs: deploy-to-development
+    runs-on: ubuntu-latest
+    environment: stage
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          echo "✅ Promoting $BUILD_ID to stage"
+          echo "URL: stage.example.com"
+
+  promote-to-production:
+    name: Promote to Production
+    needs: promote-to-stage
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          echo "✅ Promoting $BUILD_ID to production"
+          echo "URL: app.example.com"
